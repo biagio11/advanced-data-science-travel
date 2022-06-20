@@ -253,6 +253,9 @@ write.table(filtered_personal_gps_data, file = "./objects/personal_dataset_relea
 ```
 
 ```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+library(dplyr)
+library(readr)
+
 # write all files with trimmed areas
 for(filename in all_personal_gps_data[1:length(all_personal_gps_data)]){
   csv_trimmed_file <- data.frame()
