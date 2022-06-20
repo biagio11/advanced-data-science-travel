@@ -1,0 +1,89 @@
+---
+title: "Travel"
+author: "Biagio Tomasetig"
+subtitle: Analyse, Discover, Reignite
+output:
+  html_document:
+    toc: yes
+    toc_depth: 5
+editor_options:
+  markdown:
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Overview
+
+Travelling entails moving from one location to another.
+However, the idea of travelling varies from person to person.
+For someone, to travel means simply moving from their home to the nearest city; for others, a travel happens only if the distance exceeds a certain number of kilometres.
+As subjective as it may be, we all find ourselves travelling when we decide to move for personal or professional reasons.
+Even the word used to denote a move from one place to another can change the subjective perception of such move, so using travel, journey, trip can change people intentions.
+We will consider the words travel, journey, trip in a broad sense, considering any movement from one place to another, including single-day trips, outside of commonly frequented places.
+
+It is interesting to analyse these movements from one place to another and get to know what kind of information can be extracted and perhaps shared between travel companions or friends.
+This raises a lot of questions, ranging from how to collect data, to issues concerning privacy, to people willingness to share such information.
+Our goal is to try to understand these kind of relations and analyse such data to study what information are the most useful or helpful for users.
+
+In our research we will study geographic data and the best way to elicit information from those.
+Also, we will work with some users' opinions about the use of such data on social networks.
+We want to study location-based data and discover the best ideas and approaches to work with this kind of information.
+The reason for this research has it's roots in the desire to create a new social network related to travel in a broad sense.
+We will not dig deep into the software specifications but we will try to gather as much ideas as possible starting from different types of datasets.
+We will present different approaches and apply data science techniques to gain as much knowledge on the topic as possible.
+
+# Data analysis
+
+Our focus is on geographic data and information that we're going to analyse using different techniques and approaches.
+We will consider our personal location-based dataset to analyse some ideas on a single user, and we will work with different datasets from on-line sources.
+Also, we will work with some data from a specific survey on the relation between travel and social networks.
+Going into the details we're going to develop some use cases with different options of the aforementioned types of data.
+For example we could consider the relation between geo-spatial points with an evolution overtime, work with some simulations or analyse users behaviours (also with social networks) when travelling.
+
+## Single user GPS data
+
+```{r child = 'single_user_analysis.Rmd'}
+```
+
+## Users GPS data
+
+```{r child = 'multi_users_analysis.Rmd'}
+```
+
+## Social networks and Travel
+
+```{r child = 'social_analysis.Rmd'}
+```
+
+# Recap
+
+The analysis carried out led to interesting results from various points of view.
+
+-   We worked on our personal dataset of geographical trajectories and analysed:
+
+    -   general observations on the composition of geographical trajectories (time between successive points, speed, elevation, map representation from different viewpoints);
+    -   an analysis on the most visited municipalities (province and regions);
+    -   geohash observations and analysis;
+    -   proof of concept related to geohashes and their "value" overtime;
+    -   graphs and geohash movements.
+
+-   We briefly considered different datasets from other researches, in particular we explored the geohash composition of such datasets.
+
+-   We analysed the needs and ideas of users when considering a new social network related to travel.
+
+It was interesting to analyse the geographic data points, also in relation to what we remembered as an experience.
+We found out that seeing where we were made us remember previous experiences.
+This is fascinating and can be extended to a new social network, also based on possible users' ideas.
+
+We answered our questions:
+
+::: {#questions align="center"}
+***What can we obtain from a collection of geographical points?***
+
+***What is the relation between travel and social networks?***
+
+***What can make us reignite our desire to explore?***
+:::

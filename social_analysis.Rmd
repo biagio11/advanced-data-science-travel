@@ -1,0 +1,373 @@
+---
+title: "Market-like analysis"
+author: "Biagio Tomasetig"
+output: html_document
+---
+
+In this section we will include survey findings on the relation between social networks and travel in a broad sense.
+
+To analyse the needs of users on a new social network app that could include some of the features, tools and possibility to get travel statistics we proposed a survey about the relation between social networks and travel. Note that in this survey we were asking to users to refer to the term travel in a broad sense.
+The survey was proposed both in Italian and in English to get to a larger set of responses. The two set of responses were aggregated together.
+
+We can load the .csv files and start dealing with the data collected. We will limit this analysis just to the most important points.
+```{r travel_social_1, message=FALSE}
+# used libraries
+library(readr)
+library(dplyr)
+library(tidyr)
+
+# read the data
+travel_social <- read_delim("./objects/travelsocial_survey_answers.csv", delim=";")
+sample_n(travel_social, 6)
+```
+We have 75 observations over 83 variables.
+
+First we analyse the demographics to see how good is the population sample.
+```{r travel_social_2, message=FALSE}
+# used libraries
+library(ggplot2)
+library(scales)
+library(viridis)
+
+# get the demographic informations
+demographics <- travel_social %>%
+  select(age, sex, education, occupation, average_family_annual_income) %>% 
+  mutate(sex = ifelse(sex == "Male", "M", "F"))
+
+sample_n(demographics, 6)
+
+# plot general informations
+# age
+age_analysis <- demographics %>% group_by(age) %>%
+                summarize(count = n())
+age_analysis <- age_analysis %>%
+                mutate(percent = round((count*100/sum(age_analysis$count)), 2)) %>% 
+                arrange(age)
+pie(age_analysis$count, cex = 0.8, labels = paste0(age_analysis$percent, " %"), border="white", col=turbo(9), main = "Age")
+legend("topleft", age_analysis$age, cex=0.7, fill=turbo(9))
+
+# sex
+gen_analysis <- demographics %>% group_by(sex) %>%
+                summarize(count = n())
+gen_analysis <- gen_analysis %>% 
+                mutate(percent = round((count*100/sum(gen_analysis$count)), 2)) %>% 
+                arrange(sex)
+pie(gen_analysis$count, cex = 0.8, labels = paste0(gen_analysis$percent, " %"), border="white", col=c("pink", "blue"), main = "Gender")
+legend("topleft", gen_analysis$sex, cex=0.7, fill=c("pink", "blue"))
+
+# education
+edu_analysis <- demographics %>% group_by(education) %>%
+                summarize(count = n())
+edu_analysis <- edu_analysis %>% 
+                mutate(percent = round((count*100/sum(edu_analysis$count)), 2)) %>% 
+                arrange(education)
+pie(edu_analysis$count, cex = 0.8, labels = paste0(edu_analysis$percent, " %"), border="white", col=turbo(4), main = "Education")
+legend("topleft", edu_analysis$education, cex=0.7, fill=turbo(4))
+
+# occupation
+occ_analysis <- demographics %>% group_by(occupation) %>%
+                summarize(count = n())
+occ_analysis <- occ_analysis %>% 
+                mutate(percent = round((count*100/sum(occ_analysis$count)), 2)) %>% 
+                arrange(occupation)
+pie(occ_analysis$count, cex = 0.8, labels = paste0(occ_analysis$percent, " %"), border="white", col=turbo(5), main = "Occupation")
+legend("topleft", occ_analysis$occupation, cex=0.7, fill=turbo(5))
+
+# family annual income
+inc_analysis <- demographics %>% 
+                rename(income = average_family_annual_income) %>% 
+                group_by(income) %>%
+                summarize(count = n())
+inc_analysis <- inc_analysis %>% 
+                mutate(percent = round((count*100/sum(inc_analysis$count)), 2)) %>% 
+                arrange(income)
+pie(inc_analysis$count, cex = 0.8, labels = paste0(inc_analysis$percent, " %"), border="white", col=turbo(14), main = "Family Annual Income")
+legend("topleft", inc_analysis$income, cex=0.7, fill=turbo(14))
+```
+
+We can see that the majority of the population is between 18 an 29 years, with smaller percentages of the other age ranges. The majority of people who answered are Female with more than 60%. More than 50% of the partecipants have a high school diploma and nearly 30% a bachelor's degree. On the occupational status there is quite a range of responses with a majority of employers that work 1 to 39 hours per week. About the family income, interestingly there are some gaps with a majority of < 20,000 € per year (25%), then the ranges 20,000-29,000 and 30,000-39.999, while the other income ranges have lower percentages.
+
+We can move to the relation of users with currently existing social networks.
+```{r travel_social_3, message=FALSE}
+# get the social use informations
+social_network_use <- travel_social %>%
+  select(electronic_device_daily,
+         electronic_device_hours_day,
+         familiar_social,
+         facebook_use,
+         tiktok_use,
+         instagram_use,
+         twitter_use,
+         pinterest_use,
+         youtube_use,
+         twitch_use,
+         reddit_use,
+         snapchat_use,
+         telegram_use,
+         travel_sharing_social)
+
+sample_n(social_network_use, 6)
+
+# device use
+social_network_use %>% select(electronic_device_daily) %>% filter(electronic_device_daily == "No")
+social_network_use %>%
+  select(electronic_device_hours_day) %>%
+  count(electronic_device_hours_day) %>%
+  mutate(percent = round((n*100/(75)), 2))
+
+# social familiarity and use
+# familiarity
+social_fam <- social_network_use %>% select(familiar_social) %>% 
+    mutate(familiar_social = strsplit(as.character(familiar_social), ", ")) %>% 
+    unnest(familiar_social) %>% 
+    count(familiar_social) %>%
+    filter(familiar_social %in% c("Facebook", "TikTok", "Instagram", "Twitter", "Pinterest",
+                                "YouTube", "Twitch", "Reddit", "Snapchat", "Telegram"))
+# filter out just the social we're interesting in here
+
+social_fam <- social_fam %>% 
+                mutate(percent = round((n*100/sum(social_fam$n)), 2)) %>% 
+                arrange(familiar_social)
+
+pie(social_fam$n, cex = 0.8,
+    labels = paste0(social_fam$percent, " %"),
+    border="white", col=turbo(13), main = "Main Social Network Familiarity")
+legend("topleft", social_fam$familiar_social, cex=0.7, fill=turbo(13))
+
+# use
+social_use <- social_network_use %>%
+  select(-electronic_device_daily, -electronic_device_hours_day, -familiar_social, -travel_sharing_social)
+
+facebook_use <- social_use  %>% rename(hours = facebook_use) %>% mutate(social = "Facebook")
+tiktok_use <- social_use  %>% rename(hours = tiktok_use) %>% mutate(social = "TikTok")
+instagram_use <- social_use %>% rename(hours = instagram_use) %>% mutate(social = "Instagram")
+twitter_use <- social_use %>% rename(hours = twitter_use) %>% mutate(social = "Twitter")
+pinterest_use <- social_use %>% rename(hours = pinterest_use) %>% mutate(social = "Pinterest")
+youtube_use <- social_use %>% rename(hours = youtube_use) %>% mutate(social = "YouTube")
+twitch_use <- social_use %>% rename(hours = twitch_use) %>% mutate(social = "Twitch")
+reddit_use <- social_use %>% rename(hours = reddit_use) %>% mutate(social = "Reddit")
+snapchat_use <- social_use %>% rename(hours = snapchat_use) %>% mutate(social = "Snapchat")
+telegram_use <- social_use %>% rename(hours = telegram_use) %>% mutate(social = "Telegram")
+
+social_count_use <- bind_rows(facebook_use,tiktok_use,instagram_use,twitter_use,pinterest_use,
+                           youtube_use,twitch_use,reddit_use,snapchat_use,telegram_use)
+
+ggplot(data = social_count_use) +
+  geom_bar(mapping = aes(x=social, fill=hours))+
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(title = "Daily Social Network Use (in Hours)", x = "Social", y = "Count")
+```
+
+We can see that everyone who responded uses an electronic device with nearly an even distribution through the proposed spectrum (with a 20% on more than 5 hours per day). The use of different social networks is instead quite various, with the most commonly used social networks being Facebook, Instagram, YouTube. 
+
+We can analyse the users sentiment about a new social network, which was presented in the survey at a high level. People were asked about their opinions on this social network features.
+```{r travel_social_4, message=FALSE}
+# used libraries
+library(tidytext)
+library(tm) # text mining
+library(SnowballC) # for text stemming
+
+# get the travel values
+new_social <- travel_social %>%
+  select(useful_new_travel_social, useful_new_travel_social_autofinance, new_social_features)
+
+# new social feels
+new_social_analysis <- 
+  tibble(val = c("Maybe", "No", "Yes"),
+    count_ns = (new_social %>% group_by(useful_new_travel_social) %>% summarize(count = n()))$count,
+    count_ns_auto_finance = (new_social %>% group_by(useful_new_travel_social_autofinance) %>% summarize(count = n()))$count)
+
+par(mfrow = c(1, 2))
+pie(new_social_analysis$count_ns, cex = 0.8,
+    labels = paste0(new_social_analysis$count_ns, "/75"),
+    border="white", col=c("blue", "red", "green"), main = "New social feels")
+legend("topleft", new_social_analysis$val, cex=0.7, fill=c("blue", "red", "green"))
+pie(new_social_analysis$count_ns_auto_finance, cex = 0.8,
+    labels = paste0(new_social_analysis$count_ns_auto_finance, "/75"),
+    border="white", col=c("blue", "red", "green"), main = "New social feels (autofinance)")
+legend("topleft", new_social_analysis$val, cex=0.7, fill=c("blue", "red", "green"))
+par(mfrow = c(1, 1))
+
+# new social features user feelings
+nsocial_fi <- travel_social %>%
+  select(importance_feature_instant_messaging,importance_feature_sharing_photos,importance_feature_sharing_videos,
+         importance_feature_sharing_other_media,importance_feature_navigable_maps,importance_feature_associated_hardware,
+         importance_feature_collection_travel_memories,importance_feature_low_price,importance_feature_sensors_data_collection,
+         importance_feature_travel_analysis,importance_feature_comparison_users,importance_feature_forum_qa,
+         importance_feature_travel_tips,importance_feature_data_logging,importance_feature_subscribtion,
+         importance_feature_host_be_hosted,importance_feature_communities,importance_feature_travel_guides,
+         importance_feature_travel_packages,importance_feature_live_speaking,importance_feature_collectibles, 
+         importance_feature_self_finance_trips,importance_feature_currency_cryptocurrency,importance_feature_meet_new_people)
+
+nsocial_fi_count <-
+  bind_rows(
+    nsocial_fi  %>% rename(imp = importance_feature_instant_messaging) %>% mutate(feature = "Instant messaging"),
+    nsocial_fi  %>% rename(imp = importance_feature_sharing_photos) %>% mutate(feature = "Sharing photos"),
+    nsocial_fi  %>% rename(imp = importance_feature_sharing_videos) %>% mutate(feature = "Sharing videos"),
+    nsocial_fi  %>% rename(imp = importance_feature_sharing_other_media) %>% mutate(feature = "Sharing other media"),
+    nsocial_fi  %>% rename(imp = importance_feature_navigable_maps) %>% mutate(feature = "Navigable maps"),
+    nsocial_fi  %>% rename(imp = importance_feature_associated_hardware) %>% mutate(feature = "Associated hardware"),
+    nsocial_fi  %>% rename(imp = importance_feature_collection_travel_memories) %>% mutate(feature = "Travel memories"),
+    nsocial_fi  %>% rename(imp = importance_feature_low_price) %>% mutate(feature = "Low price"),
+    nsocial_fi  %>% rename(imp = importance_feature_sensors_data_collection) %>% mutate(feature = "Data collection"),
+    nsocial_fi  %>% rename(imp = importance_feature_travel_analysis) %>% mutate(feature = "Travel analysis"),
+    nsocial_fi  %>% rename(imp = importance_feature_comparison_users) %>% mutate(feature = "Users comparison"),
+    nsocial_fi  %>% rename(imp = importance_feature_forum_qa) %>% mutate(feature = "Forum/QA"),
+    nsocial_fi  %>% rename(imp = importance_feature_travel_tips) %>% mutate(feature = "Travel tips"),
+    nsocial_fi  %>% rename(imp = importance_feature_data_logging) %>% mutate(feature = "Data logging"),
+    nsocial_fi  %>% rename(imp = importance_feature_subscribtion) %>% mutate(feature = "Subscribtion"),
+    nsocial_fi  %>% rename(imp = importance_feature_host_be_hosted) %>% mutate(feature = "Host/Be hosted"),
+    nsocial_fi  %>% rename(imp = importance_feature_communities) %>% mutate(feature = "Personal communities"),
+    nsocial_fi  %>% rename(imp = importance_feature_travel_guides) %>% mutate(feature = "Travel guides from users"),
+    nsocial_fi  %>% rename(imp = importance_feature_travel_packages) %>% mutate(feature = "Travel packages"),
+    nsocial_fi  %>% rename(imp = importance_feature_live_speaking) %>% mutate(feature = "Live talks"),
+    nsocial_fi  %>% rename(imp = importance_feature_collectibles) %>% mutate(feature = "Collectibles"),
+    nsocial_fi  %>% rename(imp = importance_feature_self_finance_trips) %>% mutate(feature = "Self finance travel"),
+    nsocial_fi  %>% rename(imp = importance_feature_currency_cryptocurrency) %>% mutate(feature = "S/R (crypto)currency"),
+    nsocial_fi  %>% rename(imp = importance_feature_meet_new_people) %>% mutate(feature = "Meet new people")
+  )
+
+ggplot(data = nsocial_fi_count) +
+  geom_bar(mapping = aes(x=feature, fill=imp))+
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90, vjust=0.3, hjust=1))+
+  labs(title = "Users' Features Opinons",
+       subtitle = "Users opinons on new features of a new social network related to Travel",
+       x = "Feature", y = "Count", fill='Importance')
+
+# ideas analysis
+# tokenize
+social_features <- new_social %>% select(new_social_features) %>% 
+                   unnest_tokens(word, new_social_features)
+
+data("stop_words")
+social_features_clean <- social_features %>%
+  anti_join(stop_words, by = "word") %>% # remove stop words
+  mutate(stem = wordStem(word)) # perform stemming
+  
+social_features_clean_count <- social_features_clean %>% count(stem) %>% # count words
+                               rename(word = stem)
+
+# word fequency
+social_features_clean_count %>% filter(n>4) %>% arrange(-n)
+```
+
+The majority (48%) seems to be willing to try a new social network related with travel, with 9 partecipants over 75 (12%) that do not want to try or use it and 40% of "maybe" responses. Surprisingly when asked if they will be willing to use such social network with the additional constraint feature of giving the opportunity to auto-finance personal travel a portion of users changed their mind to "no" (roughly 19%), with nearly 43% "yes", and 38% "maybe".
+About the main features that should be present in the travel social network, really important features are "Low price (or Free)" and "Navigable Maps"; also guides, tips, memory diaries seems to be quite important for users. Users instead seem to not like subscriptions and the "Possibility to send or receive currency or cryptocurrency".
+About the possible features they would implement it appears the word "Photo" with the highest number of occurrences, followed by "Map", "Share", "Locat(ion)", "Activ(ity)" and others.
+
+Looking at the travel section, we can see some statistical values.
+```{r travel_social_5, message=FALSE}
+# used library
+library(ggwordcloud) # to render wordclouds
+
+# get the travel values
+travel <- travel_social %>%
+  select(continents, countries_number, travel_number_per_year, common_companios, travel_reasons, travel_activities, travel_meaning)
+
+sample_n(travel, 6)
+
+# continents
+continents_analysis <- travel %>% select(continents) %>% 
+                mutate(continents = strsplit(as.character(travel$continents), ", ")) %>% 
+                unnest(continents) %>% 
+                group_by(continents) %>%
+                summarize(count = n())
+continents_analysis <- continents_analysis %>% 
+                mutate(percent = round((count*100/sum(continents_analysis$count)), 2)) %>% 
+                arrange(continents)
+
+pie(continents_analysis$count, cex = 0.8,
+    labels = paste0(continents_analysis$percent, " %"),
+    border="white", col=turbo(7), main = "Visited Continents")
+legend("topleft", continents_analysis$continents, cex=0.7, fill=turbo(7))
+
+# counties been
+countries_analysis <- travel %>% select(countries_number) %>% 
+                group_by(countries_number) %>%
+                summarize(count = n())
+countries_analysis <- countries_analysis %>% 
+                mutate(percent = round((count*100/sum(countries_analysis$count)), 2)) %>% 
+                arrange(countries_number)
+
+pie(countries_analysis$count, cex = 0.8,
+    labels = paste0(countries_analysis$percent, " %"),
+    border="white", col=turbo(5), main = "Number of visited countries")
+legend("topleft", countries_analysis$countries_number, cex=0.7, fill=turbo(5))
+
+# common companions
+companios_analysis <- travel %>% select(common_companios) %>% 
+                group_by(common_companios) %>%
+                summarize(count = n())
+companios_analysis <- companios_analysis %>% 
+                mutate(percent = round((count*100/sum(companios_analysis$count)), 2)) %>% 
+                arrange(common_companios)
+
+pie(companios_analysis$count, cex = 0.8,
+    labels = paste0(companios_analysis$percent, " %"),
+    border="white", col=turbo(5), main = "Common companions during travels")
+legend("topleft", companios_analysis$common_companios, cex=0.7, fill=turbo(5))
+
+# travel reasons
+reasons_analysis <- travel %>% select(travel_reasons) %>% 
+                  mutate(travel_reasons = strsplit(as.character(travel$travel_reasons), ", ")) %>% 
+                  unnest(travel_reasons) %>% 
+                  group_by(travel_reasons) %>%
+                  summarize(count = n()) %>% filter(count > 1)
+reasons_analysis <- reasons_analysis %>% 
+                mutate(percent = round((count*100/sum(reasons_analysis$count)), 2)) %>% 
+                arrange(travel_reasons)
+
+pie(reasons_analysis$count, cex = 0.8,
+    labels = paste0(reasons_analysis$percent, " %"),
+    border="white", col=turbo(6), main = "Travel reasons")
+legend("topleft", reasons_analysis$travel_reasons, cex=0.7, fill=turbo(6))
+
+# travel activities
+activities_analysis <- travel %>% select(travel_activities) %>% 
+                  mutate(travel_activities = strsplit(as.character(travel$travel_activities), ", ")) %>% 
+                  unnest(travel_activities) %>% 
+                  group_by(travel_activities) %>%
+                  summarize(count = n()) %>% filter(count > 1)
+activities_analysis <- activities_analysis %>% 
+                mutate(percent = round((count*100/sum(activities_analysis$count)), 2)) %>% 
+                arrange(travel_activities)
+pie(activities_analysis$count, cex = 0.8, labels = paste0(activities_analysis$percent, " %"), border="white", col=turbo(6), main = "Travel activities")
+legend("topleft", activities_analysis$travel_activities, cex=0.7, fill=turbo(6))
+
+# travel meaning
+# tokenize ideas
+travel_meaning_long <- travel %>% select(travel_meaning) %>%
+                  mutate(travel_meaning = strsplit(travel_meaning, ", ")) %>% unnest(travel_meaning) %>% 
+                  rename(words = travel_meaning) %>% mutate(words = tolower(words)) %>% count(words)
+
+# tokenize tidy single words
+travel_meaning <- travel %>% select(travel_meaning) %>% 
+                  unnest_tokens(word, travel_meaning) %>%
+                  count(word) %>%
+                  ungroup()
+
+# remove unique stop words
+stopwords <- tibble(word = c("and","be","from","in","my","of","to",NA))
+
+travel_meaning_clean <- travel_meaning %>% anti_join(stopwords, by = "word")
+
+# plot word cloud
+set.seed(11)
+ggplot(travel_meaning_clean,
+       aes(label = word, size = n,
+           color = factor(sample.int(30, nrow(travel_meaning_clean), replace = TRUE)),)) +
+  geom_text_wordcloud_area(eccentricity = 1) +
+  scale_size_area(max_size = 25) +
+  theme_minimal()
+
+```
+
+From this simple analysis of user travels, we can see a lot of people has visited (apart from Europe where the observations took place) Asia, followed
+by North America and Africa. The number of visited countries per person is for the majority in the range 4-12 (mean 8) countries. A little travellers prefer to move alone, while family, friends or partners seems the most common choice (note no one usually travels with strangers).
+About the travel reasons, 1/4 of the participants travel for cultural reasons, recreational reasons and for gathering experiences, while the other reasons occupy together roughly another fourth of the total answers. The most of the users want to explore natural heritage or have some relax and free time; 20% or them wants to know the places culture; 10% travel for sport and 10% for personal hobbies, while just 4% travel for work or educational needs.
+People travel for different reasons, of which "Fun" stays at the first place, followed by experience, freedom, discovery, relax, culture, leisure, ...
+
+The results are quite interesting both on the travel side and also under the profile of a possible new social network. The general analysis carried out gives a good idea about what users expectations are.

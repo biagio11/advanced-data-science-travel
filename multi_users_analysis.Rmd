@@ -1,0 +1,137 @@
+---
+title: "Users GPS data"
+author: "Biagio Tomasetig"
+output: html_document
+---
+
+We can extend some of the previous consideration to the multi-user setting. This is because the dataset analysed in depth was recorded just by one user.
+
+We could simulate GPS recordings, either based on our personal dataset or via random gps paths simulation. This will not give much informative details since it would basically entail random paths. Because of that we consider some existing localization datasets from different fields. The dataset considered include:
+
+-   Cab mobility traces from the dataset [Cabspotting](http://cabspotting.org) which represents taxi cabs mobility data recorded in San Francisco, USA;
+-   [T-Drive](https://www.microsoft.com/en-us/research/publication/t-drive-trajectory-data-sample/) is a taxi drives dataset collected in Beijing, China;
+-   [Brightkite](https://snap.stanford.edu/data/loc-brightkite.html) exposes "check-ins" of users on the social networks;
+-   [Gowalla](https://snap.stanford.edu/data/loc-gowalla.html) which considers data from the namely platform where users share their locations;
+-   other data found on the web (personal user datasets) and our personal datasets we have already considered.
+
+The datasets were chosen among all the available sets to represent a wide area of the world.
+
+Let's load every dataset into one.
+
+```{r multi_users_1, message=FALSE, warning=FALSE}
+# used libraries
+library(dplyr)
+library(tidyr)
+library(readr)
+```
+
+```{r multi_users_2, eval=FALSE, message=FALSE, warning=FALSE}
+# full load and polished save takes more than 3 minutes
+library(tictoc)
+
+tic("Load external datasets")
+# load Cabspotting
+cubspotting <- read_delim("./objects/extra_datasets/cabspotting.csv", delim =" ")
+
+# load T-Drive
+tdrive <- read_csv("./objects/extra_datasets/tdrive.csv")
+
+# load Brigtkite
+brightkite <- read_tsv("./objects/extra_datasets/brightkite.csv")
+
+# load Gowalla
+gowalla <- read_tsv("./objects/extra_datasets/gowalla.csv")
+
+# load Whatch Data
+watch_data <- read_csv("./objects/extra_datasets/watch_data.csv")
+
+# mantain just lat and lon and save the files
+cubspotting <- cubspotting %>% mutate(lat = as.numeric(lat)) %>% select(lat, lon)
+tdrive <- tdrive %>% select(lat, lon)
+brightkite <- brightkite %>% select(lat, lon)
+gowalla <- gowalla %>% select(lat, lon)
+watch_data <- watch_data %>% mutate(lon = as.numeric(lon)) %>% select(lat, lon)
+
+# write once
+write.table(cubspotting, file = "./objects/extra_datasets/polished/cabspotting.csv", sep=",", row.names=FALSE)
+write.table(tdrive , file = "./objects/extra_datasets/polished/tdrive.csv", sep=",", row.names=FALSE)
+write.table(brightkite, file = "./objects/extra_datasets/polished/brightkite.csv", sep=",", row.names=FALSE)
+write.table(gowalla, file = "./objects/extra_datasets/polished/gowalla.csv", sep=",", row.names=FALSE)
+write.table(watch_data, file = "./objects/extra_datasets/polished/watch_data.csv", sep=",", row.names=FALSE)
+
+# original total size of .csv files is roughly 1.8 GB
+# modified version (lat, lon) total size of .csv files <850MB
+toc() # stop the timer
+```
+
+```{r multi_users_3, message=FALSE}
+# load Cabspotting
+cubspotting <- read_csv("./objects/extra_datasets/polished/cabspotting.csv")
+
+# load T-Drive
+tdrive <- read_csv("./objects/extra_datasets/polished/tdrive.csv")
+
+# load Brigtkite
+brightkite <- read_csv("./objects/extra_datasets/polished/brightkite.csv")
+
+# load Gowalla
+gowalla <- read_csv("./objects/extra_datasets/polished/gowalla.csv")
+
+# load Whatch Data
+watch_data <- read_csv("./objects/extra_datasets/polished/watch_data.csv")
+
+# personal data (from the already in the environment personal_gps_data)
+personal <- personal_gps_data %>% select(lat, lon)
+
+# combine the datasets together
+external_dataset <- bind_rows(list(cubspotting, tdrive, brightkite, gowalla, personal))
+
+external_dataset %>% summarize(observation_number = n())
+
+# drop problematic observations
+external_dataset <- external_dataset %>%
+  filter(between(lat, -90, 89.999), between(lon, -180, 179.999))
+
+external_dataset %>% summarize(observation_number = n())
+
+```
+
+We can see we have 46 million observations, that we trimmed to just the 2 essential variables (latitude, longitude). The dropping of some variables is due to the alignment of multiple datasets with different feature variables. In this part we avoid an in depth analysis, since we are combining together different datasets, and maintaining just the coordinates. We focus just on the geohash analysis (level 4 to avoid an excessive load).
+
+```{r multi_users_4, message=FALSE}
+# used library
+library(geohashTools)
+library(leaflet)
+
+# compute the geohashes for each point
+external_dataset <- external_dataset %>% mutate(geohash = gh_encode(lat, lon, 4L))
+
+# get the geohashes based on the frequency (number of points on each geohash)
+full_dataset_gh_freq <- external_dataset %>% 
+                          group_by(geohash) %>%
+                          count(geohash) %>%
+                          arrange(-n)
+full_dataset_gh_freq <- full_dataset_gh_freq %>% mutate(norm = n/sum(full_dataset_gh_freq$n))
+
+# color palette
+bins <- c(0, 5, 25, 50, 250, 500, 5000, 50000, Inf)
+pal <- colorBin("YlOrRd", domain = full_dataset_gh_freq$n, bins = bins)
+
+# geohashes as SPDF
+visited_geohashes <- gh_to_spdf(full_dataset_gh_freq$geohash)
+
+# plot all the geohashes in leaflet
+gh_full_heatmap_map <- 
+  leaflet() %>% addTiles() %>% setView(lat = 0.0, lng = 0.0, zoom = 2) %>% 
+  addPolygons(data = visited_geohashes,
+              label = paste(rownames(visited_geohashes@data), round(full_dataset_gh_freq$norm*100, 2), sep=" - "),
+              fillColor = pal(full_dataset_gh_freq$n),
+              fillOpacity = 0.7,
+              opacity = 1, color = "white", dashArray = "3",
+              stroke = TRUE, weight = 1)
+gh_full_heatmap_map
+```
+
+We can see there are many geohashes, but some of them are sparse (due to social network registration datasets).
+
+This shows the potential of GNSS analysis, to gather and extract precious pieces of information. We are not going into the details but given the dataset we could easily deal with different kind of study as done in the previous section.
